@@ -8,6 +8,22 @@ import (
 	"github.com/boltdb/bolt"
 )
 
+func testBoltStore(t *testing.T) *BoltStore {
+	fh, err := ioutil.TempFile("", "bolt")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	os.Remove(fh.Name())
+
+	// Successfully creates and returns a store
+	store, err := NewBoltStore(fh.Name())
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	return store
+}
+
 func TestNewBoltStore(t *testing.T) {
 	fh, err := ioutil.TempFile("", "bolt")
 	if err != nil {
@@ -49,5 +65,28 @@ func TestNewBoltStore(t *testing.T) {
 	}
 	if _, err := tx.CreateBucket([]byte(dbConf)); err != bolt.ErrBucketExists {
 		t.Fatalf("bad: %v", err)
+	}
+}
+
+func TestBoltStore_FirstIndex(t *testing.T) {
+	store := testBoltStore(t)
+	defer store.Close()
+
+	// Set a mock raft log
+	err := store.conn.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(dbLogs))
+		return bucket.Put(uint64ToBytes(123), []byte("hello, world"))
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Fetch the first Raft index
+	idx, err := store.FirstIndex()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if idx != 123 {
+		t.Fatalf("bad: %d", idx)
 	}
 }

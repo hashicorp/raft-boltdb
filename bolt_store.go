@@ -64,3 +64,18 @@ func (b *BoltStore) initialize() error {
 func (b *BoltStore) Close() error {
 	return b.conn.Close()
 }
+
+// FirstIndex returns the first known index from the Raft log.
+func (b *BoltStore) FirstIndex() (uint64, error) {
+	var idx uint64
+	err := b.conn.View(func(tx *bolt.Tx) error {
+		curs := tx.Bucket([]byte(dbLogs)).Cursor()
+		if first, _ := curs.First(); first == nil {
+			idx = 0
+		} else {
+			idx = bytesToUint64(first)
+		}
+		return nil
+	})
+	return idx, err
+}
