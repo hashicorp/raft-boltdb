@@ -107,22 +107,8 @@ func (b *BoltStore) LastIndex() (uint64, error) {
 func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
 	var val []byte
 	err := b.conn.View(func(tx *bolt.Tx) error {
-		curs := tx.Bucket([]byte(dbLogs)).Cursor()
-		for k, v := curs.First(); k != nil; k, v = curs.Next() {
-			current := bytesToUint64(k)
-
-			// If the index matches, set val and break
-			if current == idx {
-				val = v
-				break
-			}
-
-			// We didn't find the index and are passed it,
-			// so we will never find it at this point.
-			if current > idx {
-				break
-			}
-		}
+		bucket := tx.Bucket([]byte(dbLogs))
+		val = bucket.Get(uint64ToBytes(idx))
 		return nil
 	})
 	if err != nil {
@@ -161,15 +147,12 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 
 // DeleteRange is used to delete logs within a given range inclusively.
 func (b *BoltStore) DeleteRange(min, max uint64) error {
+	minKey := uint64ToBytes(min)
 	err := b.conn.Update(func(tx *bolt.Tx) error {
 		curs := tx.Bucket([]byte(dbLogs)).Cursor()
-		for k, _ := curs.First(); k != nil; k, _ = curs.Next() {
+		for k, _ := curs.Seek(minKey); k != nil; k, _ = curs.Next() {
 			// Handle out-of-range log index
-			idx := bytesToUint64(k)
-			if idx < min {
-				continue
-			}
-			if idx > max {
+			if bytesToUint64(k) > max {
 				return nil
 			}
 
