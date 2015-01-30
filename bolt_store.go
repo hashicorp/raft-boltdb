@@ -98,19 +98,33 @@ func (b *BoltStore) LastIndex() (uint64, error) {
 
 // GetLog is used to retrieve a log from BoltDB at a given index.
 func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
-	var k, v []byte
+	var val []byte
 	err := b.conn.View(func(tx *bolt.Tx) error {
 		curs := tx.Bucket([]byte(dbLogs)).Cursor()
-		k, v = curs.Seek(uint64ToBytes(idx))
+		for k, v := curs.First(); k != nil; k, v = curs.Next() {
+			current := bytesToUint64(k)
+
+			// If the index matches, set val and break
+			if current == idx {
+				val = v
+				break
+			}
+
+			// We didn't find the index and are passed it,
+			// so we will never find it at this point.
+			if current > idx {
+				break
+			}
+		}
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-	if k == nil {
+	if val == nil {
 		return raft.ErrLogNotFound
 	}
-	decodeMsgPack(v, log)
+	decodeMsgPack(val, log)
 	return nil
 }
 

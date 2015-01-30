@@ -222,14 +222,8 @@ func TestBoltStore_SetLogs(t *testing.T) {
 	defer os.Remove(store.path)
 
 	// Create a set of logs
-	log1 := &raft.Log{
-		Data:  []byte("log1"),
-		Index: 1,
-	}
-	log2 := &raft.Log{
-		Data:  []byte("log2"),
-		Index: 2,
-	}
+	log1 := testRaftLog(1, "log1")
+	log2 := testRaftLog(2, "log2")
 	logs := []*raft.Log{log1, log2}
 
 	// Attempt to store the logs
@@ -276,7 +270,7 @@ func TestBoltStore_DeleteRange(t *testing.T) {
 
 	// Ensure the logs were deleted
 	if err := store.GetLog(1, new(raft.Log)); err != raft.ErrLogNotFound {
-		t.Fatalf("should have deleted log1: %v", l)
+		t.Fatalf("should have deleted log1")
 	}
 	if err := store.GetLog(2, new(raft.Log)); err != raft.ErrLogNotFound {
 		t.Fatalf("should have deleted log2")
