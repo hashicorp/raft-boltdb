@@ -1,6 +1,7 @@
 package raftboltdb
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -274,5 +275,27 @@ func TestBoltStore_DeleteRange(t *testing.T) {
 	}
 	if err := store.GetLog(2, new(raft.Log)); err != raft.ErrLogNotFound {
 		t.Fatalf("should have deleted log2")
+	}
+}
+
+func TestBoltStore_SetKey_GetKey(t *testing.T) {
+	store := testBoltStore(t)
+	defer store.Close()
+	defer os.Remove(store.path)
+
+	k, v := []byte("hello"), []byte("world")
+
+	// Try to set a k/v pair
+	if err := store.SetKey(k, v); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Try to read it back
+	val, err := store.Get(k)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if !bytes.Equal(val, v) {
+		t.Fatalf("bad: %v", val)
 	}
 }

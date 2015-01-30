@@ -1,6 +1,8 @@
 package raftboltdb
 
 import (
+	"errors"
+
 	"github.com/boltdb/bolt"
 	"github.com/hashicorp/raft"
 )
@@ -13,6 +15,11 @@ const (
 	// Bucket names we perform transactions in
 	dbLogs = "logs"
 	dbConf = "conf"
+)
+
+var (
+	// An error indicating a given key does not exist
+	ErrKeyNotFound = errors.New("not found")
 )
 
 type BoltStore struct {
@@ -174,4 +181,29 @@ func (b *BoltStore) DeleteRange(min, max uint64) error {
 		return nil
 	})
 	return err
+}
+
+// SetKey is used to set a key/value set outside of the raft log
+func (b *BoltStore) SetKey(k, v []byte) error {
+	err := b.conn.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(dbConf))
+		return bucket.Put(k, v)
+	})
+	return err
+}
+
+func (b *BoltStore) Get(k []byte) ([]byte, error) {
+	var val []byte
+	err := b.conn.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(dbConf))
+		val = bucket.Get(k)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if val == nil {
+		return nil, ErrKeyNotFound
+	}
+	return val, nil
 }
