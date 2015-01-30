@@ -71,22 +71,69 @@ func TestNewBoltStore(t *testing.T) {
 func TestBoltStore_FirstIndex(t *testing.T) {
 	store := testBoltStore(t)
 	defer store.Close()
+	defer os.Remove(store.path)
+
+	// Should get 0 index on empty log
+	idx, err := store.FirstIndex()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if idx != 0 {
+		t.Fatalf("bad: %v", idx)
+	}
 
 	// Set a mock raft log
-	err := store.conn.Update(func(tx *bolt.Tx) error {
+	err = store.conn.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(dbLogs))
-		return bucket.Put(uint64ToBytes(123), []byte("hello, world"))
+		bucket.Put(uint64ToBytes(1), []byte("log1"))
+		bucket.Put(uint64ToBytes(2), []byte("log2"))
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	// Fetch the first Raft index
-	idx, err := store.FirstIndex()
+	idx, err = store.FirstIndex()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if idx != 123 {
+	if idx != 1 {
+		t.Fatalf("bad: %d", idx)
+	}
+}
+
+func TestBoltStore_LastIndex(t *testing.T) {
+	store := testBoltStore(t)
+	defer store.Close()
+	defer os.Remove(store.path)
+
+	// Should get 0 index on empty log
+	idx, err := store.LastIndex()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if idx != 0 {
+		t.Fatalf("bad: %v", idx)
+	}
+
+	// Set a mock raft log
+	err = store.conn.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(dbLogs))
+		bucket.Put(uint64ToBytes(1), []byte("log1"))
+		bucket.Put(uint64ToBytes(2), []byte("log2"))
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Fetch the last Raft index
+	idx, err = store.LastIndex()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if idx != 2 {
 		t.Fatalf("bad: %d", idx)
 	}
 }

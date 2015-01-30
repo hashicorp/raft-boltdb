@@ -79,3 +79,18 @@ func (b *BoltStore) FirstIndex() (uint64, error) {
 	})
 	return idx, err
 }
+
+// LastIndex returns the last known index from the Raft log.
+func (b *BoltStore) LastIndex() (uint64, error) {
+	var idx uint64
+	err := b.conn.View(func(tx *bolt.Tx) error {
+		curs := tx.Bucket([]byte(dbLogs)).Cursor()
+		if last, _ := curs.Last(); last == nil {
+			idx = 0
+		} else {
+			idx = bytesToUint64(last)
+		}
+		return nil
+	})
+	return idx, err
+}
