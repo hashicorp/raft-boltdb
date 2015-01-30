@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/raft"
 )
 
-func testBoltStore(t *testing.T) *BoltStore {
+func testBoltStore(t testing.TB) *BoltStore {
 	fh, err := ioutil.TempFile("", "bolt")
 	if err != nil {
 		t.Fatalf("err: %s", err)
