@@ -137,3 +137,27 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 	})
 	return err
 }
+
+// DeleteRange is used to delete logs within a given range inclusively.
+func (b *BoltStore) DeleteRange(min, max uint64) error {
+	err := b.conn.Update(func(tx *bolt.Tx) error {
+		curs := tx.Bucket([]byte(dbLogs)).Cursor()
+		for k, _ := curs.First(); k != nil; k, _ = curs.Next() {
+			// Handle out-of-range log index
+			idx := bytesToUint64(k)
+			if idx < min {
+				continue
+			}
+			if idx > max {
+				return nil
+			}
+
+			// Delete in-range log index
+			if err := curs.Delete(); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
+}

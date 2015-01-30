@@ -26,6 +26,13 @@ func testBoltStore(t *testing.T) *BoltStore {
 	return store
 }
 
+func testRaftLog(idx uint64, data string) *raft.Log {
+	return &raft.Log{
+		Data:  []byte(data),
+		Index: idx,
+	}
+}
+
 func TestNewBoltStore(t *testing.T) {
 	fh, err := ioutil.TempFile("", "bolt")
 	if err != nil {
@@ -243,5 +250,35 @@ func TestBoltStore_SetLogs(t *testing.T) {
 	}
 	if !reflect.DeepEqual(log2, result2) {
 		t.Fatalf("bad: %#v", result2)
+	}
+}
+
+func TestBoltStore_DeleteRange(t *testing.T) {
+	store := testBoltStore(t)
+	defer store.Close()
+	defer os.Remove(store.path)
+
+	// Create a set of logs
+	log1 := testRaftLog(1, "log1")
+	log2 := testRaftLog(2, "log2")
+	log3 := testRaftLog(3, "log3")
+	logs := []*raft.Log{log1, log2, log3}
+
+	// Attempt to store the logs
+	if err := store.StoreLogs(logs); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Attempt to delete a range of logs
+	if err := store.DeleteRange(1, 2); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Ensure the logs were deleted
+	if err := store.GetLog(1, new(raft.Log)); err != raft.ErrLogNotFound {
+		t.Fatalf("should have deleted log1: %v", l)
+	}
+	if err := store.GetLog(2, new(raft.Log)); err != raft.ErrLogNotFound {
+		t.Fatalf("should have deleted log2")
 	}
 }
