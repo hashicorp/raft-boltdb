@@ -34,6 +34,16 @@ func testRaftLog(idx uint64, data string) *raft.Log {
 	}
 }
 
+func TestBoltStore_Implements(t *testing.T) {
+	var store interface{} = &BoltStore{}
+	if _, ok := store.(raft.StableStore); !ok {
+		t.Fatalf("BoltStore does not implement raft.StableStore")
+	}
+	if _, ok := store.(raft.LogStore); !ok {
+		t.Fatalf("BoltStore does not implement raft.LogStore")
+	}
+}
+
 func TestNewBoltStore(t *testing.T) {
 	fh, err := ioutil.TempFile("", "bolt")
 	if err != nil {
@@ -283,6 +293,11 @@ func TestBoltStore_Set_Get(t *testing.T) {
 	defer store.Close()
 	defer os.Remove(store.path)
 
+	// Returns error on non-existent key
+	if _, err := store.Get([]byte("bad")); err != ErrKeyNotFound {
+		t.Fatalf("expected not found error, got: %q", err)
+	}
+
 	k, v := []byte("hello"), []byte("world")
 
 	// Try to set a k/v pair
@@ -304,6 +319,11 @@ func TestBoltStore_SetUint64_GetUint64(t *testing.T) {
 	store := testBoltStore(t)
 	defer store.Close()
 	defer os.Remove(store.path)
+
+	// Returns error on non-existent key
+	if _, err := store.GetUint64([]byte("bad")); err != ErrKeyNotFound {
+		t.Fatalf("expected not found error, got: %q", err)
+	}
 
 	k, v := []byte("abc"), uint64(123)
 
