@@ -180,3 +180,68 @@ func TestBoltStore_GetLog(t *testing.T) {
 		t.Fatalf("bad: %#v", log)
 	}
 }
+
+func TestBoltStore_SetLog(t *testing.T) {
+	store := testBoltStore(t)
+	defer store.Close()
+	defer os.Remove(store.path)
+
+	// Create the log
+	log := &raft.Log{
+		Data:  []byte("log1"),
+		Index: 1,
+	}
+
+	// Attempt to store the log
+	if err := store.StoreLog(log); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Retrieve the log again
+	result := new(raft.Log)
+	if err := store.GetLog(1, result); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Ensure the log comes back the same
+	if !reflect.DeepEqual(log, result) {
+		t.Fatalf("bad: %v", result)
+	}
+}
+
+func TestBoltStore_SetLogs(t *testing.T) {
+	store := testBoltStore(t)
+	defer store.Close()
+	defer os.Remove(store.path)
+
+	// Create a set of logs
+	log1 := &raft.Log{
+		Data:  []byte("log1"),
+		Index: 1,
+	}
+	log2 := &raft.Log{
+		Data:  []byte("log2"),
+		Index: 2,
+	}
+	logs := []*raft.Log{log1, log2}
+
+	// Attempt to store the logs
+	if err := store.StoreLogs(logs); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Ensure we stored them all
+	result1, result2 := new(raft.Log), new(raft.Log)
+	if err := store.GetLog(1, result1); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if !reflect.DeepEqual(log1, result1) {
+		t.Fatalf("bad: %#v", result1)
+	}
+	if err := store.GetLog(2, result2); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if !reflect.DeepEqual(log2, result2) {
+		t.Fatalf("bad: %#v", result2)
+	}
+}

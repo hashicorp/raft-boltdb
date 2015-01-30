@@ -113,3 +113,27 @@ func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
 	decodeMsgPack(v, log)
 	return nil
 }
+
+// StoreLog is used to store a single raft log
+func (b *BoltStore) StoreLog(log *raft.Log) error {
+	return b.StoreLogs([]*raft.Log{log})
+}
+
+// StoreLogs is used to store a set of raft logs
+func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
+	err := b.conn.Update(func(tx *bolt.Tx) error {
+		for _, log := range logs {
+			key := uint64ToBytes(log.Index)
+			val, err := encodeMsgPack(log)
+			if err != nil {
+				return err
+			}
+			bucket := tx.Bucket([]byte(dbLogs))
+			if err := bucket.Put(key, val.Bytes()); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
+}
