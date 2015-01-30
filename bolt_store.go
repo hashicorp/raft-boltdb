@@ -166,8 +166,8 @@ func (b *BoltStore) DeleteRange(min, max uint64) error {
 	return err
 }
 
-// SetKey is used to set a key/value set outside of the raft log
-func (b *BoltStore) SetKey(k, v []byte) error {
+// Set is used to set a key/value set outside of the raft log
+func (b *BoltStore) Set(k, v []byte) error {
 	err := b.conn.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(dbConf))
 		return bucket.Put(k, v)
@@ -175,6 +175,7 @@ func (b *BoltStore) SetKey(k, v []byte) error {
 	return err
 }
 
+// Get is used to retrieve a value from the k/v store by key
 func (b *BoltStore) Get(k []byte) ([]byte, error) {
 	var val []byte
 	err := b.conn.View(func(tx *bolt.Tx) error {
@@ -189,4 +190,18 @@ func (b *BoltStore) Get(k []byte) ([]byte, error) {
 		return nil, ErrKeyNotFound
 	}
 	return val, nil
+}
+
+// SetUint64 is like Set, but handles uint64 values
+func (b *BoltStore) SetUint64(key []byte, val uint64) error {
+	return b.Set(key, uint64ToBytes(val))
+}
+
+// GetUint64 is like Get, but handles uint64 values
+func (b *BoltStore) GetUint64(key []byte) (uint64, error) {
+	val, err := b.Get(key)
+	if err != nil {
+		return 0, err
+	}
+	return bytesToUint64(val), nil
 }

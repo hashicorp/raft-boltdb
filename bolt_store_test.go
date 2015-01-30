@@ -278,7 +278,7 @@ func TestBoltStore_DeleteRange(t *testing.T) {
 	}
 }
 
-func TestBoltStore_SetKey_GetKey(t *testing.T) {
+func TestBoltStore_Set_Get(t *testing.T) {
 	store := testBoltStore(t)
 	defer store.Close()
 	defer os.Remove(store.path)
@@ -286,7 +286,7 @@ func TestBoltStore_SetKey_GetKey(t *testing.T) {
 	k, v := []byte("hello"), []byte("world")
 
 	// Try to set a k/v pair
-	if err := store.SetKey(k, v); err != nil {
+	if err := store.Set(k, v); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -296,6 +296,28 @@ func TestBoltStore_SetKey_GetKey(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	if !bytes.Equal(val, v) {
+		t.Fatalf("bad: %v", val)
+	}
+}
+
+func TestBoltStore_SetUint64_GetUint64(t *testing.T) {
+	store := testBoltStore(t)
+	defer store.Close()
+	defer os.Remove(store.path)
+
+	k, v := []byte("abc"), uint64(123)
+
+	// Attempt to set the k/v pair
+	if err := store.SetUint64(k, v); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Read back the value
+	val, err := store.GetUint64(k)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if val != v {
 		t.Fatalf("bad: %v", val)
 	}
 }
