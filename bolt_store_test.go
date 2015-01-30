@@ -3,9 +3,11 @@ package raftboltdb
 import (
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/boltdb/bolt"
+	"github.com/hashicorp/raft"
 )
 
 func testBoltStore(t *testing.T) *BoltStore {
@@ -135,5 +137,46 @@ func TestBoltStore_LastIndex(t *testing.T) {
 	}
 	if idx != 2 {
 		t.Fatalf("bad: %d", idx)
+	}
+}
+
+func TestBoltStore_GetLog(t *testing.T) {
+	store := testBoltStore(t)
+	defer store.Close()
+	defer os.Remove(store.path)
+
+	log := new(raft.Log)
+
+	// Should return an error on non-existent log
+	if err := store.GetLog(1, log); err != raft.ErrLogNotFound {
+		t.Fatalf("expected raft log not found error, got: %v", err)
+	}
+
+	// Create a fake raft log
+	existing := &raft.Log{
+		Data:  []byte("log1"),
+		Index: 1,
+	}
+	logBuf, err := encodeMsgPack(existing)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Set a mock raft log
+	err = store.conn.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(dbLogs))
+		bucket.Put(uint64ToBytes(1), logBuf.Bytes())
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Should return the proper log
+	if err := store.GetLog(1, log); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if !reflect.DeepEqual(log, existing) {
+		t.Fatalf("bad: %#v", log)
 	}
 }

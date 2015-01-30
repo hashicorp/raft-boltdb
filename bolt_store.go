@@ -2,6 +2,7 @@ package raftboltdb
 
 import (
 	"github.com/boltdb/bolt"
+	"github.com/hashicorp/raft"
 )
 
 const (
@@ -93,4 +94,22 @@ func (b *BoltStore) LastIndex() (uint64, error) {
 		return nil
 	})
 	return idx, err
+}
+
+// GetLog is used to retrieve a log from BoltDB at a given index.
+func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
+	var k, v []byte
+	err := b.conn.View(func(tx *bolt.Tx) error {
+		curs := tx.Bucket([]byte(dbLogs)).Cursor()
+		k, v = curs.Seek(uint64ToBytes(idx))
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if k == nil {
+		return raft.ErrLogNotFound
+	}
+	decodeMsgPack(v, log)
+	return nil
 }
