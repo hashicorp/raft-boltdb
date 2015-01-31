@@ -124,9 +124,7 @@ func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
 	if val == nil {
 		return raft.ErrLogNotFound
 	}
-	decodeMsgPack(val, log)
-
-	return nil
+	return decodeMsgPack(val, log)
 }
 
 // StoreLog is used to store a single raft log

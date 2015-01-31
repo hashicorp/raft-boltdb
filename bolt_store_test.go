@@ -103,14 +103,13 @@ func TestBoltStore_FirstIndex(t *testing.T) {
 	}
 
 	// Set a mock raft log
-	err = store.conn.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(dbLogs))
-		bucket.Put(uint64ToBytes(1), []byte("log1"))
-		bucket.Put(uint64ToBytes(2), []byte("log2"))
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	logs := []*raft.Log{
+		testRaftLog(1, "log1"),
+		testRaftLog(2, "log2"),
+		testRaftLog(3, "log3"),
+	}
+	if err := store.StoreLogs(logs); err != nil {
+		t.Fatalf("bad: %s", err)
 	}
 
 	// Fetch the first Raft index
@@ -138,14 +137,13 @@ func TestBoltStore_LastIndex(t *testing.T) {
 	}
 
 	// Set a mock raft log
-	err = store.conn.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(dbLogs))
-		bucket.Put(uint64ToBytes(1), []byte("log1"))
-		bucket.Put(uint64ToBytes(2), []byte("log2"))
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	logs := []*raft.Log{
+		testRaftLog(1, "log1"),
+		testRaftLog(2, "log2"),
+		testRaftLog(3, "log3"),
+	}
+	if err := store.StoreLogs(logs); err != nil {
+		t.Fatalf("bad: %s", err)
 	}
 
 	// Fetch the last Raft index
@@ -153,7 +151,7 @@ func TestBoltStore_LastIndex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if idx != 2 {
+	if idx != 3 {
 		t.Fatalf("bad: %d", idx)
 	}
 }
@@ -170,31 +168,21 @@ func TestBoltStore_GetLog(t *testing.T) {
 		t.Fatalf("expected raft log not found error, got: %v", err)
 	}
 
-	// Create a fake raft log
-	existing := &raft.Log{
-		Data:  []byte("log1"),
-		Index: 1,
-	}
-	logBuf, err := encodeMsgPack(existing)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
 	// Set a mock raft log
-	err = store.conn.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(dbLogs))
-		bucket.Put(uint64ToBytes(1), logBuf.Bytes())
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	logs := []*raft.Log{
+		testRaftLog(1, "log1"),
+		testRaftLog(2, "log2"),
+		testRaftLog(3, "log3"),
+	}
+	if err := store.StoreLogs(logs); err != nil {
+		t.Fatalf("bad: %s", err)
 	}
 
 	// Should return the proper log
-	if err := store.GetLog(1, log); err != nil {
+	if err := store.GetLog(2, log); err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if !reflect.DeepEqual(log, existing) {
+	if !reflect.DeepEqual(log, logs[1]) {
 		t.Fatalf("bad: %#v", log)
 	}
 }
@@ -233,9 +221,10 @@ func TestBoltStore_SetLogs(t *testing.T) {
 	defer os.Remove(store.path)
 
 	// Create a set of logs
-	log1 := testRaftLog(1, "log1")
-	log2 := testRaftLog(2, "log2")
-	logs := []*raft.Log{log1, log2}
+	logs := []*raft.Log{
+		testRaftLog(1, "log1"),
+		testRaftLog(2, "log2"),
+	}
 
 	// Attempt to store the logs
 	if err := store.StoreLogs(logs); err != nil {
@@ -247,13 +236,13 @@ func TestBoltStore_SetLogs(t *testing.T) {
 	if err := store.GetLog(1, result1); err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if !reflect.DeepEqual(log1, result1) {
+	if !reflect.DeepEqual(logs[0], result1) {
 		t.Fatalf("bad: %#v", result1)
 	}
 	if err := store.GetLog(2, result2); err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if !reflect.DeepEqual(log2, result2) {
+	if !reflect.DeepEqual(logs[1], result2) {
 		t.Fatalf("bad: %#v", result2)
 	}
 }
