@@ -22,6 +22,9 @@ var (
 	ErrKeyNotFound = errors.New("not found")
 )
 
+// BoltStore provides access to BoltDB for Raft to store and retrieve
+// log entries. It also provides key/value storage, and can be used as
+// a LogStore and StableStore.
 type BoltStore struct {
 	// conn is the underlying handle to the db.
 	conn *bolt.DB
@@ -38,7 +41,7 @@ func NewBoltStore(path string) (*BoltStore, error) {
 		return nil, err
 	}
 
-	// Create and return the new db store
+	// Create the new store
 	store := &BoltStore{
 		conn: handle,
 		path: path,
@@ -55,18 +58,17 @@ func NewBoltStore(path string) (*BoltStore, error) {
 
 // initialize is used to set up all of the buckets.
 func (b *BoltStore) initialize() error {
-	// Create all the buckets
 	tx, err := b.conn.Begin(true)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 
+	// Create all the buckets
 	if _, err := tx.CreateBucketIfNotExists(dbLogs); err != nil {
-		tx.Rollback()
 		return err
 	}
 	if _, err := tx.CreateBucketIfNotExists(dbConf); err != nil {
-		tx.Rollback()
 		return err
 	}
 
@@ -144,12 +146,10 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 		key := uint64ToBytes(log.Index)
 		val, err := encodeMsgPack(log)
 		if err != nil {
-			tx.Rollback()
 			return err
 		}
 		bucket := tx.Bucket(dbLogs)
 		if err := bucket.Put(key, val.Bytes()); err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
@@ -176,7 +176,6 @@ func (b *BoltStore) DeleteRange(min, max uint64) error {
 
 		// Delete in-range log index
 		if err := curs.Delete(); err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
@@ -194,7 +193,6 @@ func (b *BoltStore) Set(k, v []byte) error {
 
 	bucket := tx.Bucket(dbConf)
 	if err := bucket.Put(k, v); err != nil {
-		tx.Rollback()
 		return err
 	}
 
