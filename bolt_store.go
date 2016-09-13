@@ -213,7 +213,7 @@ func (b *BoltStore) Get(k []byte) ([]byte, error) {
 	if val == nil {
 		return nil, ErrKeyNotFound
 	}
-	return append([]byte{}, val...), nil
+	return append([]byte(nil), val...), nil
 }
 
 // SetUint64 is like Set, but handles uint64 values
