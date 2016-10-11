@@ -27,7 +27,7 @@ func testBoltStore(t testing.TB) *BoltStore {
 	return store
 }
 
-func testRaftLog(idx uint64, data string) *raft.Log {
+func testRaftLog(idx raft.Index, data string) *raft.Log {
 	return &raft.Log{
 		Data:  []byte(data),
 		Index: idx,

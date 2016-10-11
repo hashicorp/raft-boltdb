@@ -81,7 +81,7 @@ func (b *BoltStore) Close() error {
 }
 
 // FirstIndex returns the first known index from the Raft log.
-func (b *BoltStore) FirstIndex() (uint64, error) {
+func (b *BoltStore) FirstIndex() (raft.Index, error) {
 	tx, err := b.conn.Begin(false)
 	if err != nil {
 		return 0, err
@@ -92,12 +92,12 @@ func (b *BoltStore) FirstIndex() (uint64, error) {
 	if first, _ := curs.First(); first == nil {
 		return 0, nil
 	} else {
-		return bytesToUint64(first), nil
+		return bytesToIndex(first), nil
 	}
 }
 
 // LastIndex returns the last known index from the Raft log.
-func (b *BoltStore) LastIndex() (uint64, error) {
+func (b *BoltStore) LastIndex() (raft.Index, error) {
 	tx, err := b.conn.Begin(false)
 	if err != nil {
 		return 0, err
@@ -108,12 +108,12 @@ func (b *BoltStore) LastIndex() (uint64, error) {
 	if last, _ := curs.Last(); last == nil {
 		return 0, nil
 	} else {
-		return bytesToUint64(last), nil
+		return bytesToIndex(last), nil
 	}
 }
 
 // GetLog is used to retrieve a log from BoltDB at a given index.
-func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
+func (b *BoltStore) GetLog(idx raft.Index, log *raft.Log) error {
 	tx, err := b.conn.Begin(false)
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
 	defer tx.Rollback()
 
 	bucket := tx.Bucket(dbLogs)
-	val := bucket.Get(uint64ToBytes(idx))
+	val := bucket.Get(indexToBytes(idx))
 
 	if val == nil {
 		return raft.ErrLogNotFound
@@ -143,7 +143,7 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 	defer tx.Rollback()
 
 	for _, log := range logs {
-		key := uint64ToBytes(log.Index)
+		key := indexToBytes(log.Index)
 		val, err := encodeMsgPack(log)
 		if err != nil {
 			return err
@@ -158,8 +158,8 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 }
 
 // DeleteRange is used to delete logs within a given range inclusively.
-func (b *BoltStore) DeleteRange(min, max uint64) error {
-	minKey := uint64ToBytes(min)
+func (b *BoltStore) DeleteRange(min, max raft.Index) error {
+	minKey := indexToBytes(min)
 
 	tx, err := b.conn.Begin(true)
 	if err != nil {
@@ -170,7 +170,7 @@ func (b *BoltStore) DeleteRange(min, max uint64) error {
 	curs := tx.Bucket(dbLogs).Cursor()
 	for k, _ := curs.Seek(minKey); k != nil; k, _ = curs.Next() {
 		// Handle out-of-range log index
-		if bytesToUint64(k) > max {
+		if bytesToIndex(k) > max {
 			break
 		}
 
