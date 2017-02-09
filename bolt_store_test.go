@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/hashicorp/raft"
@@ -41,6 +42,89 @@ func TestBoltStore_Implements(t *testing.T) {
 	}
 	if _, ok := store.(raft.LogStore); !ok {
 		t.Fatalf("BoltStore does not implement raft.LogStore")
+	}
+}
+
+func TestBoltOptionsTimeout(t *testing.T) {
+	fh, err := ioutil.TempFile("", "bolt")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	os.Remove(fh.Name())
+	defer os.Remove(fh.Name())
+	options := Options{
+		Path: fh.Name(),
+		BoltOptions: &bolt.Options{
+			Timeout: time.Second / 10,
+		},
+	}
+	store, err := New(options)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	defer store.Close()
+	// trying to open it again should timeout
+	doneCh := make(chan error, 1)
+	go func() {
+		_, err := New(options)
+		doneCh <- err
+	}()
+	select {
+	case err := <-doneCh:
+		if err == nil || err.Error() != "timeout" {
+			t.Errorf("Expected timeout error but got %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Errorf("Gave up waiting for timeout response")
+	}
+}
+
+func TestBoltOptionsReadOnly(t *testing.T) {
+	fh, err := ioutil.TempFile("", "bolt")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	defer os.Remove(fh.Name())
+	store, err := NewBoltStore(fh.Name())
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	// Create the log
+	log := &raft.Log{
+		Data:  []byte("log1"),
+		Index: 1,
+	}
+	// Attempt to store the log
+	if err := store.StoreLog(log); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	store.Close()
+	options := Options{
+		Path: fh.Name(),
+		BoltOptions: &bolt.Options{
+			Timeout:  time.Second / 10,
+			ReadOnly: true,
+		},
+	}
+	roStore, err := New(options)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	defer roStore.Close()
+	result := new(raft.Log)
+	if err := roStore.GetLog(1, result); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Ensure the log comes back the same
+	if !reflect.DeepEqual(log, result) {
+		t.Errorf("bad: %v", result)
+	}
+	// Attempt to store the log, should fail on a read-only store
+	err = roStore.StoreLog(log)
+	if err != bolt.ErrDatabaseReadOnly {
+		t.Errorf("expecting error %v, but got %v", bolt.ErrDatabaseReadOnly, err)
 	}
 }
 
