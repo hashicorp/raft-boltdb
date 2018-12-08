@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/boltdb/bolt"
+	bolt "go.etcd.io/bbolt"
 	"github.com/hashicorp/raft"
 )
 
