@@ -1,8 +1,11 @@
 language: go
+arch:
+    - amd64
+    - ppc64le
 
 go:
-    - 1.6
-    - 1.7
+#    - 1.6
+#    - 1.7
     - tip
 
 install: make deps
