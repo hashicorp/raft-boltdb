@@ -3,7 +3,7 @@ package raftboltdb
 import (
 	"errors"
 
-	"github.com/boltdb/bolt"
+	"go.etcd.io/bbolt"
 	"github.com/hashicorp/raft"
 )
 
@@ -27,7 +27,7 @@ var (
 // a LogStore and StableStore.
 type BoltStore struct {
 	// conn is the underlying handle to the db.
-	conn *bolt.DB
+	conn *bbolt.DB
 
 	// The path to the Bolt database file
 	path string
@@ -40,7 +40,7 @@ type Options struct {
 
 	// BoltOptions contains any specific BoltDB options you might
 	// want to specify [e.g. open timeout]
-	BoltOptions *bolt.Options
+	BoltOptions *bbolt.Options
 
 	// NoSync causes the database to skip fsync calls after each
 	// write to the log. This is unsafe, so it should be used
@@ -63,7 +63,7 @@ func NewBoltStore(path string) (*BoltStore, error) {
 // New uses the supplied options to open the BoltDB and prepare it for use as a raft backend.
 func New(options Options) (*BoltStore, error) {
 	// Try to connect
-	handle, err := bolt.Open(options.Path, dbFileMode, options.BoltOptions)
+	handle, err := bbolt.Open(options.Path, dbFileMode, options.BoltOptions)
 	if err != nil {
 		return nil, err
 	}
