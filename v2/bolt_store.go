@@ -3,8 +3,8 @@ package raftboltdb
 import (
 	"errors"
 
-	"go.etcd.io/bbolt"
 	"github.com/hashicorp/raft"
+	"go.etcd.io/bbolt"
 )
 
 const (
@@ -22,7 +22,7 @@ var (
 	ErrKeyNotFound = errors.New("not found")
 )
 
-// BoltStore provides access to BoltDB for Raft to store and retrieve
+// BoltStore provides access to Bbolt for Raft to store and retrieve
 // log entries. It also provides key/value storage, and can be used as
 // a LogStore and StableStore.
 type BoltStore struct {
@@ -33,12 +33,12 @@ type BoltStore struct {
 	path string
 }
 
-// Options contains all the configuration used to open the BoltDB
+// Options contains all the configuration used to open the Bbolt
 type Options struct {
-	// Path is the file path to the BoltDB to use
+	// Path is the file path to the Bbolt to use
 	Path string
 
-	// BoltOptions contains any specific BoltDB options you might
+	// BoltOptions contains any specific Bbolt options you might
 	// want to specify [e.g. open timeout]
 	BoltOptions *bbolt.Options
 
@@ -60,7 +60,7 @@ func NewBoltStore(path string) (*BoltStore, error) {
 	return New(Options{Path: path})
 }
 
-// New uses the supplied options to open the BoltDB and prepare it for use as a raft backend.
+// New uses the supplied options to open the Bbolt and prepare it for use as a raft backend.
 func New(options Options) (*BoltStore, error) {
 	// Try to connect
 	handle, err := bbolt.Open(options.Path, dbFileMode, options.BoltOptions)
@@ -142,7 +142,7 @@ func (b *BoltStore) LastIndex() (uint64, error) {
 	}
 }
 
-// GetLog is used to retrieve a log from BoltDB at a given index.
+// GetLog is used to retrieve a log from Bbolt at a given index.
 func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
 	tx, err := b.conn.Begin(false)
 	if err != nil {
