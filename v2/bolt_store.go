@@ -79,7 +79,7 @@ func New(options Options) (*BoltStore, error) {
 	// If the store was opened read-only, don't try and create buckets
 	if !options.readOnly() {
 		// Set up our buckets
-		if err := store.Initialize(); err != nil {
+		if err := store.initialize(); err != nil {
 			store.Close()
 			return nil, err
 		}
@@ -88,7 +88,7 @@ func New(options Options) (*BoltStore, error) {
 }
 
 // initialize is used to set up all of the buckets.
-func (b *BoltStore) Initialize() error {
+func (b *BoltStore) initialize() error {
 	tx, err := b.conn.Begin(true)
 	if err != nil {
 		return err
