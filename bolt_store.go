@@ -266,3 +266,9 @@ func (b *BoltStore) GetUint64(key []byte) (uint64, error) {
 func (b *BoltStore) Sync() error {
 	return b.conn.Sync()
 }
+
+// InternalUseOnlyAccessBoltDB is used for the v2/transition function
+// WARNING: THIS IS ONLY TO BE USED BY THAT FUNCTION
+func (b *BoltStore) InternalUseOnlyAccessBoltDB() *bolt.DB {
+	return b.conn
+}
