@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"go.etcd.io/bbolt"
 	"github.com/hashicorp/raft"
+	v1 "github.com/hashicorp/raft-boltdb"
+	"go.etcd.io/bbolt"
 )
 
 func testBoltStore(t testing.TB) *BoltStore {
@@ -413,4 +414,77 @@ func TestBoltStore_SetUint64_GetUint64(t *testing.T) {
 	if val != v {
 		t.Fatalf("bad: %v", val)
 	}
+}
+
+func TestBoltStore_TransitionBbolt(t *testing.T) {
+
+	//Create BoltDB
+	fh, err := ioutil.TempFile("", "bolt")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	os.Remove(fh.Name())
+	defer os.Remove(fh.Name())
+
+	// Successfully creates and returns a store
+	oldstore, err := v1.NewBoltStore(fh.Name())
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Ensure the file was created
+	if oldstore.Options.Path != fh.Name() {
+		t.Fatalf("unexpected file path %q", oldstore.Options.Path)
+	}
+	if _, err := os.Stat(fh.Name()); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	log := new(raft.Log)
+
+	// Set a mock raft log
+	logs := []*raft.Log{
+		testRaftLog(1, "log1"),
+		testRaftLog(2, "log2"),
+		testRaftLog(3, "log3"),
+	}
+	if err := oldstore.StoreLogs(logs); err != nil {
+		t.Fatalf("bad: %s", err)
+	}
+
+	// Should return the proper log
+	oldresult := new(raft.Log)
+	if err := oldstore.GetLog(2, oldresult); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if !reflect.DeepEqual(log, logs[1]) {
+		t.Fatalf("bad: %#v", log)
+	}
+
+	// Close the store so we can open again
+	if err := oldstore.Close(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	//Send to func
+	newstore, err := Transition(oldstore)
+	if err != nil {
+		t.Fatalf("did not transition successfully, err %v", err)
+	}
+
+	if err := newstore.StoreLogs(logs); err != nil {
+		t.Fatalf("bad: %s", err)
+	}
+
+	// Should return the proper log
+	newresult := new(raft.Log)
+	if err := newstore.GetLog(2, newresult); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	//Comapre
+	if !reflect.DeepEqual(oldresult, newresult) {
+		t.Errorf("BoltDB log did not equal Bbolt log, Boltdb %v, Bbolt: %v", oldresult, newresult)
+	}
+
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/hashicorp/raft"
+	v1 "github.com/hashicorp/raft-boltdb"
 	"go.etcd.io/bbolt"
 )
 
@@ -78,7 +79,7 @@ func New(options Options) (*BoltStore, error) {
 	// If the store was opened read-only, don't try and create buckets
 	if !options.readOnly() {
 		// Set up our buckets
-		if err := store.initialize(); err != nil {
+		if err := store.Initialize(); err != nil {
 			store.Close()
 			return nil, err
 		}
@@ -87,7 +88,7 @@ func New(options Options) (*BoltStore, error) {
 }
 
 // initialize is used to set up all of the buckets.
-func (b *BoltStore) initialize() error {
+func (b *BoltStore) Initialize() error {
 	tx, err := b.conn.Begin(true)
 	if err != nil {
 		return err
@@ -265,4 +266,32 @@ func (b *BoltStore) GetUint64(key []byte) (uint64, error) {
 // database file to sync against the disk.
 func (b *BoltStore) Sync() error {
 	return b.conn.Sync()
+}
+
+func Transition(old *v1.BoltStore, path string) (*BoltStore, error) {
+
+	//Create the bbolt log store
+	newbolt, err := New(Options{Path: path})
+
+	//Start a connection to the old
+	oldtx, err := old.Conn.Begin(false)
+	if err != nil {
+		return newbolt, err
+	}
+
+	//Grab the old buckets
+	confBucket := oldtx.Bucket([]byte(dbConf))
+	logBucket := oldtx.Bucket([]byte(dbLogs))
+
+	//Loop over both old buckets and set them in the new
+	confBucket.ForEach(func(k, v []byte) error {
+		return newbolt.Set(k, v)
+	})
+
+	logBucket.ForEach(func(k, v []byte) error {
+		return newbolt.Set(k, v)
+	})
+
+	return newbolt, nil
+
 }
