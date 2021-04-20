@@ -268,13 +268,18 @@ func (b *BoltStore) Sync() error {
 	return b.conn.Sync()
 }
 
+// Transition takes a BoltDB and a path, and outputs a
+// Bbolt and generates it at that path
 func Transition(old *v1.BoltStore, path string) (*BoltStore, error) {
 
 	//Create the bbolt log store
 	newbolt, err := New(Options{Path: path})
 
+	//Grab connection to the old store
+	oldconn := old.InternalUseOnlyAccessBoltDB()
+
 	//Start a connection to the old
-	oldtx, err := old.Conn.Begin(false)
+	oldtx, err := oldconn.Begin(false)
 	if err != nil {
 		return newbolt, err
 	}
@@ -283,13 +288,21 @@ func Transition(old *v1.BoltStore, path string) (*BoltStore, error) {
 	confBucket := oldtx.Bucket([]byte(dbConf))
 	logBucket := oldtx.Bucket([]byte(dbLogs))
 
+	//Start a connection to the new
+	newtx, err := newbolt.conn.Begin(false)
+	if err != nil {
+		return newbolt, err
+	}
+
 	//Loop over both old buckets and set them in the new
 	confBucket.ForEach(func(k, v []byte) error {
-		return newbolt.Set(k, v)
+		bucket := newtx.Bucket(dbConf)
+		return bucket.Put(k, v)
 	})
 
 	logBucket.ForEach(func(k, v []byte) error {
-		return newbolt.Set(k, v)
+		bucket := newtx.Bucket(dbLogs)
+		return bucket.Put(k, v)
 	})
 
 	return newbolt, nil

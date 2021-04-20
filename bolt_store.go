@@ -27,7 +27,7 @@ var (
 // a LogStore and StableStore.
 type BoltStore struct {
 	// conn is the underlying handle to the db.
-	Conn *bolt.DB
+	conn *bolt.DB
 
 	// The path to the Bolt database file
 	path string
@@ -71,7 +71,7 @@ func New(options Options) (*BoltStore, error) {
 
 	// Create the new store
 	store := &BoltStore{
-		Conn: handle,
+		conn: handle,
 		path: options.Path,
 	}
 
@@ -88,7 +88,7 @@ func New(options Options) (*BoltStore, error) {
 
 // initialize is used to set up all of the buckets.
 func (b *BoltStore) initialize() error {
-	tx, err := b.Conn.Begin(true)
+	tx, err := b.conn.Begin(true)
 	if err != nil {
 		return err
 	}
@@ -107,12 +107,12 @@ func (b *BoltStore) initialize() error {
 
 // Close is used to gracefully close the DB connection.
 func (b *BoltStore) Close() error {
-	return b.Conn.Close()
+	return b.conn.Close()
 }
 
 // FirstIndex returns the first known index from the Raft log.
 func (b *BoltStore) FirstIndex() (uint64, error) {
-	tx, err := b.Conn.Begin(false)
+	tx, err := b.conn.Begin(false)
 	if err != nil {
 		return 0, err
 	}
@@ -128,7 +128,7 @@ func (b *BoltStore) FirstIndex() (uint64, error) {
 
 // LastIndex returns the last known index from the Raft log.
 func (b *BoltStore) LastIndex() (uint64, error) {
-	tx, err := b.Conn.Begin(false)
+	tx, err := b.conn.Begin(false)
 	if err != nil {
 		return 0, err
 	}
@@ -144,7 +144,7 @@ func (b *BoltStore) LastIndex() (uint64, error) {
 
 // GetLog is used to retrieve a log from BoltDB at a given index.
 func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
-	tx, err := b.Conn.Begin(false)
+	tx, err := b.conn.Begin(false)
 	if err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ func (b *BoltStore) StoreLog(log *raft.Log) error {
 
 // StoreLogs is used to store a set of raft logs
 func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
-	tx, err := b.Conn.Begin(true)
+	tx, err := b.conn.Begin(true)
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 func (b *BoltStore) DeleteRange(min, max uint64) error {
 	minKey := uint64ToBytes(min)
 
-	tx, err := b.Conn.Begin(true)
+	tx, err := b.conn.Begin(true)
 	if err != nil {
 		return err
 	}
@@ -215,7 +215,7 @@ func (b *BoltStore) DeleteRange(min, max uint64) error {
 
 // Set is used to set a key/value set outside of the raft log
 func (b *BoltStore) Set(k, v []byte) error {
-	tx, err := b.Conn.Begin(true)
+	tx, err := b.conn.Begin(true)
 	if err != nil {
 		return err
 	}
@@ -231,7 +231,7 @@ func (b *BoltStore) Set(k, v []byte) error {
 
 // Get is used to retrieve a value from the k/v store by key
 func (b *BoltStore) Get(k []byte) ([]byte, error) {
-	tx, err := b.Conn.Begin(false)
+	tx, err := b.conn.Begin(false)
 	if err != nil {
 		return nil, err
 	}
@@ -264,5 +264,11 @@ func (b *BoltStore) GetUint64(key []byte) (uint64, error) {
 // under normal operation unless NoSync is enabled, in which this forces the
 // database file to sync against the disk.
 func (b *BoltStore) Sync() error {
-	return b.Conn.Sync()
+	return b.conn.Sync()
+}
+
+// InternalUseOnlyAccessBoltDB is used for the v2/transition function
+// WARNING: THIS IS ONLY TO BE USED BY THAT FUNCTION
+func (b *BoltStore) InternalUseOnlyAccessBoltDB() *bolt.DB {
+	return b.conn
 }

@@ -432,22 +432,15 @@ func TestBoltStore_TransitionBbolt(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Ensure the file was created
-	if oldstore.Options.Path != fh.Name() {
-		t.Fatalf("unexpected file path %q", oldstore.Options.Path)
-	}
-	if _, err := os.Stat(fh.Name()); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	log := new(raft.Log)
-
 	// Set a mock raft log
+	log := new(raft.Log)
 	logs := []*raft.Log{
 		testRaftLog(1, "log1"),
 		testRaftLog(2, "log2"),
 		testRaftLog(3, "log3"),
 	}
+
+	//Store logs old
 	if err := oldstore.StoreLogs(logs); err != nil {
 		t.Fatalf("bad: %s", err)
 	}
@@ -457,21 +450,18 @@ func TestBoltStore_TransitionBbolt(t *testing.T) {
 	if err := oldstore.GetLog(2, oldresult); err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if !reflect.DeepEqual(log, logs[1]) {
-		t.Fatalf("bad: %#v", log)
-	}
 
-	// Close the store so we can open again
 	if err := oldstore.Close(); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	//Send to func
-	newstore, err := Transition(oldstore)
+	newstore, err := Transition(oldstore, fh.Name())
 	if err != nil {
 		t.Fatalf("did not transition successfully, err %v", err)
 	}
 
+	//Store same logs in new
 	if err := newstore.StoreLogs(logs); err != nil {
 		t.Fatalf("bad: %s", err)
 	}
