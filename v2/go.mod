@@ -9,4 +9,3 @@ require (
 	github.com/hashicorp/raft-boltdb v0.0.0-20210409134258-03c10cc3d4ea
 	go.etcd.io/bbolt v1.3.5
 )
-
