@@ -271,9 +271,9 @@ func (b *BoltStore) Sync() error {
 	return b.conn.Sync()
 }
 
-// MigratetoV2 reads in the source file path of a BoltDB file
+// MigrateToV2 reads in the source file path of a BoltDB file
 // and outputs all the data migrated to a Bbolt destination file
-func MigratetoV2(source, destination string) (*BoltStore, error) {
+func MigrateToV2(source, destination string) (*BoltStore, error) {
 	_, err := os.Stat(destination)
 	if err == nil {
 		return nil, fmt.Errorf("file exists in destination %v", destination)

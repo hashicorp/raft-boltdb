@@ -417,7 +417,7 @@ func TestBoltStore_SetUint64_GetUint64(t *testing.T) {
 	}
 }
 
-func TestBoltStore_MigratetoV2(t *testing.T) {
+func TestBoltStore_MigrateToV2(t *testing.T) {
 
 	dir, err := ioutil.TempDir("", t.Name())
 	if err != nil {
@@ -455,7 +455,7 @@ func TestBoltStore_MigratetoV2(t *testing.T) {
 		t.Fatalf("failed closing source database: %s", err)
 	}
 
-	destDb, err := MigratetoV2(srcFile, destFile)
+	destDb, err := MigrateToV2(srcFile, destFile)
 	if err != nil {
 		t.Fatalf("did not migrate successfully, err %v", err)
 	}
