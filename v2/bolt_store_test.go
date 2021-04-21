@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -416,65 +417,58 @@ func TestBoltStore_SetUint64_GetUint64(t *testing.T) {
 	}
 }
 
-func TestBoltStore_TransitionBbolt(t *testing.T) {
+func TestBoltStore_MigratetoV2(t *testing.T) {
 
-	//Create BoltDB
-	fh, err := ioutil.TempFile("", "bolt")
+	dir, err := ioutil.TempDir("", t.Name())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	os.Remove(fh.Name())
-	defer os.Remove(fh.Name())
+	defer os.RemoveAll(dir)
+
+	var sourceFile, destFile string
+	sourceFile = filepath.Join(dir, "/sourcepath")
+	destFile = filepath.Join(dir, "/destpath")
 
 	// Successfully creates and returns a store
-	oldstore, err := v1.NewBoltStore(fh.Name())
+	sourceDb, err := v1.NewBoltStore(sourceFile)
 	if err != nil {
-		t.Fatalf("err: %s", err)
+		t.Fatalf("failed creating source database: %s", err)
 	}
+	defer sourceDb.Close()
 
 	// Set a mock raft log
-	log := new(raft.Log)
 	logs := []*raft.Log{
 		testRaftLog(1, "log1"),
 		testRaftLog(2, "log2"),
 		testRaftLog(3, "log3"),
 	}
 
-	//Store logs old
-	if err := oldstore.StoreLogs(logs); err != nil {
-		t.Fatalf("bad: %s", err)
+	//Store logs source
+	if err := sourceDb.StoreLogs(logs); err != nil {
+		t.Fatalf("failed storing logs in source database: %s", err)
+	}
+	sourceResult := new(raft.Log)
+	if err := sourceDb.GetLog(2, sourceResult); err != nil {
+		t.Fatalf("failed getting log from source database: %s", err)
 	}
 
-	// Should return the proper log
-	oldresult := new(raft.Log)
-	if err := oldstore.GetLog(2, oldresult); err != nil {
-		t.Fatalf("err: %s", err)
+	if err := sourceDb.Close(); err != nil {
+		t.Fatalf("failed closing source database: %s", err)
 	}
 
-	if err := oldstore.Close(); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	//Send to func
-	newstore, err := Transition(oldstore, fh.Name())
+	destDb, err := MigratetoV2(sourceFile, destFile)
 	if err != nil {
-		t.Fatalf("did not transition successfully, err %v", err)
+		t.Fatalf("did not migrate successfully, err %v", err)
+	}
+	defer destDb.Close()
+
+	destResult := new(raft.Log)
+	if err := destDb.GetLog(2, destResult); err != nil {
+		t.Fatalf("failed getting log from destination database: %s", err)
 	}
 
-	//Store same logs in new
-	if err := newstore.StoreLogs(logs); err != nil {
-		t.Fatalf("bad: %s", err)
-	}
-
-	// Should return the proper log
-	newresult := new(raft.Log)
-	if err := newstore.GetLog(2, newresult); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	//Comapre
-	if !reflect.DeepEqual(oldresult, newresult) {
-		t.Errorf("BoltDB log did not equal Bbolt log, Boltdb %v, Bbolt: %v", oldresult, newresult)
+	if !reflect.DeepEqual(sourceResult, destResult) {
+		t.Errorf("BoltDB log did not equal Bbolt log, Boltdb %v, Bbolt: %v", sourceResult, destResult)
 	}
 
 }
