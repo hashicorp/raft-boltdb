@@ -425,16 +425,15 @@ func TestBoltStore_MigratetoV2(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	var sourceFile, destFile string
-	sourceFile = filepath.Join(dir, "/sourcepath")
-	destFile = filepath.Join(dir, "/destpath")
+	srcFile := filepath.Join(dir, "/sourcepath")
+	destFile := filepath.Join(dir, "/destpath")
 
 	// Successfully creates and returns a store
-	sourceDb, err := v1.NewBoltStore(sourceFile)
+	srcDb, err := v1.NewBoltStore(srcFile)
 	if err != nil {
 		t.Fatalf("failed creating source database: %s", err)
 	}
-	defer sourceDb.Close()
+	defer srcDb.Close()
 
 	// Set a mock raft log
 	logs := []*raft.Log{
@@ -444,19 +443,19 @@ func TestBoltStore_MigratetoV2(t *testing.T) {
 	}
 
 	//Store logs source
-	if err := sourceDb.StoreLogs(logs); err != nil {
+	if err := srcDb.StoreLogs(logs); err != nil {
 		t.Fatalf("failed storing logs in source database: %s", err)
 	}
-	sourceResult := new(raft.Log)
-	if err := sourceDb.GetLog(2, sourceResult); err != nil {
+	srcResult := new(raft.Log)
+	if err := srcDb.GetLog(2, srcResult); err != nil {
 		t.Fatalf("failed getting log from source database: %s", err)
 	}
 
-	if err := sourceDb.Close(); err != nil {
+	if err := srcDb.Close(); err != nil {
 		t.Fatalf("failed closing source database: %s", err)
 	}
 
-	destDb, err := MigratetoV2(sourceFile, destFile)
+	destDb, err := MigratetoV2(srcFile, destFile)
 	if err != nil {
 		t.Fatalf("did not migrate successfully, err %v", err)
 	}
@@ -467,8 +466,8 @@ func TestBoltStore_MigratetoV2(t *testing.T) {
 		t.Fatalf("failed getting log from destination database: %s", err)
 	}
 
-	if !reflect.DeepEqual(sourceResult, destResult) {
-		t.Errorf("BoltDB log did not equal Bbolt log, Boltdb %v, Bbolt: %v", sourceResult, destResult)
+	if !reflect.DeepEqual(srcResult, destResult) {
+		t.Errorf("BoltDB log did not equal Bbolt log, Boltdb %v, Bbolt: %v", srcResult, destResult)
 	}
 
 }

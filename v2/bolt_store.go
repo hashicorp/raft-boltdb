@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	boltdbbolt "github.com/boltdb/bolt"
+	v1 "github.com/boltdb/bolt"
 	"github.com/hashicorp/raft"
 	"go.etcd.io/bbolt"
 )
@@ -271,7 +271,7 @@ func (b *BoltStore) Sync() error {
 	return b.conn.Sync()
 }
 
-// MigratetoV2 reads in the source file path of a BoltDB file 
+// MigratetoV2 reads in the source file path of a BoltDB file
 // and outputs all the data migrated to a Bbolt destination file
 func MigratetoV2(source, destination string) (*BoltStore, error) {
 	_, err := os.Stat(destination)
@@ -279,7 +279,7 @@ func MigratetoV2(source, destination string) (*BoltStore, error) {
 		return nil, fmt.Errorf("file exists in destination %v", destination)
 	}
 
-	sourceDb, err := boltdbbolt.Open(source, dbFileMode, &boltdbbolt.Options{
+	srcDb, err := v1.Open(source, dbFileMode, &v1.Options{
 		ReadOnly: true,
 		Timeout:  1 * time.Minute,
 	})
@@ -288,11 +288,11 @@ func MigratetoV2(source, destination string) (*BoltStore, error) {
 	}
 
 	//Start a connection to the source
-	sourcetx, err := sourceDb.Begin(false)
+	srctx, err := srcDb.Begin(false)
 	if err != nil {
 		return nil, fmt.Errorf("failed connecting to source database: %v", err)
 	}
-	defer sourcetx.Rollback()
+	defer srctx.Rollback()
 
 	//Create the destination
 	destDb, err := New(Options{Path: destination})
@@ -312,9 +312,9 @@ func MigratetoV2(source, destination string) (*BoltStore, error) {
 	//Loop over both old buckets and set them in the new
 	buckets := [][]byte{dbConf, dbLogs}
 	for _, b := range buckets {
-		sourceB := sourcetx.Bucket(b)
+		srcB := srctx.Bucket(b)
 		destB := desttx.Bucket(b)
-		err = sourceB.ForEach(func(k, v []byte) error {
+		err = srcB.ForEach(func(k, v []byte) error {
 			return destB.Put(k, v)
 		})
 		if err != nil {
