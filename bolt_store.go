@@ -2,7 +2,9 @@ package raftboltdb
 
 import (
 	"errors"
+	"time"
 
+	metrics "github.com/armon/go-metrics"
 	"github.com/boltdb/bolt"
 	"github.com/hashicorp/raft"
 )
@@ -166,23 +168,32 @@ func (b *BoltStore) StoreLog(log *raft.Log) error {
 
 // StoreLogs is used to store a set of raft logs
 func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
+	defer metrics.MeasureSince([]string{"raft", "boltdb", "storeLogs"}, time.Now())
 	tx, err := b.conn.Begin(true)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
+	batchSize := 0
 	for _, log := range logs {
 		key := uint64ToBytes(log.Index)
 		val, err := encodeMsgPack(log)
 		if err != nil {
 			return err
 		}
+
+		logLen := val.Len()
 		bucket := tx.Bucket(dbLogs)
 		if err := bucket.Put(key, val.Bytes()); err != nil {
 			return err
 		}
+		batchSize += logLen
+		metrics.AddSample([]string{"raft", "boltdb", "logSize"}, float32(logLen))
 	}
+
+	metrics.AddSample([]string{"raft", "boltdb", "logsPerBatch"}, float32(len(logs)))
+	metrics.AddSample([]string{"raft", "boltdb", "logBatchSize"}, float32(batchSize))
 
 	return tx.Commit()
 }
