@@ -1,6 +1,6 @@
 module github.com/hashicorp/raft-boltdb
 
-go 1.12
+go 1.16
 
 require (
 	github.com/armon/go-metrics v0.3.8 // indirect

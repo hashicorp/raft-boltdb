@@ -168,7 +168,7 @@ func (b *BoltStore) StoreLog(log *raft.Log) error {
 
 // StoreLogs is used to store a set of raft logs
 func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
-	defer metrics.MeasureSince([]string{"raft", "boltdb", "storeLogs"}, time.Now())
+	now := time.Now()
 	tx, err := b.conn.Begin(true)
 	if err != nil {
 		return err
@@ -194,6 +194,16 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 
 	metrics.AddSample([]string{"raft", "boltdb", "logsPerBatch"}, float32(len(logs)))
 	metrics.AddSample([]string{"raft", "boltdb", "logBatchSize"}, float32(batchSize))
+	// Both the deferral and the inline function are important for this metrics
+	// accuracy. Deferral allows us to calculate the metric after the tx.Commit
+	// has finished and thus account for all the processing of the operation.
+	// The inlined function ensures that we do not calculate the time.Since(now)
+	// at the time of deferral but rather when the go runtime executes the
+	// deferred function.
+	defer func() {
+		metrics.AddSample([]string{"raft", "boltdb", "writeCapacity"}, (float32(1_000_000_000)/float32(time.Since(now).Nanoseconds()))*float32(len(logs)))
+		metrics.MeasureSince([]string{"raft", "boltdb", "storeLogs"}, now)
+	}()
 
 	return tx.Commit()
 }
