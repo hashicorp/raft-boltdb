@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/hashicorp/raft"
+	"go.etcd.io/bbolt"
 )
 
 func testBoltStore(t testing.TB) *BoltStore {
@@ -54,7 +54,7 @@ func TestBoltOptionsTimeout(t *testing.T) {
 	defer os.Remove(fh.Name())
 	options := Options{
 		Path: fh.Name(),
-		BoltOptions: &bolt.Options{
+		BoltOptions: &bbolt.Options{
 			Timeout: time.Second / 10,
 		},
 	}
@@ -102,7 +102,7 @@ func TestBoltOptionsReadOnly(t *testing.T) {
 	store.Close()
 	options := Options{
 		Path: fh.Name(),
-		BoltOptions: &bolt.Options{
+		BoltOptions: &bbolt.Options{
 			Timeout:  time.Second / 10,
 			ReadOnly: true,
 		},
@@ -123,8 +123,8 @@ func TestBoltOptionsReadOnly(t *testing.T) {
 	}
 	// Attempt to store the log, should fail on a read-only store
 	err = roStore.StoreLog(log)
-	if err != bolt.ErrDatabaseReadOnly {
-		t.Errorf("expecting error %v, but got %v", bolt.ErrDatabaseReadOnly, err)
+	if err != bbolt.ErrDatabaseReadOnly {
+		t.Errorf("expecting error %v, but got %v", bbolt.ErrDatabaseReadOnly, err)
 	}
 }
 
@@ -156,7 +156,7 @@ func TestNewBoltStore(t *testing.T) {
 	}
 
 	// Ensure our tables were created
-	db, err := bolt.Open(fh.Name(), dbFileMode, nil)
+	db, err := bbolt.Open(fh.Name(), dbFileMode, nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -164,10 +164,10 @@ func TestNewBoltStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if _, err := tx.CreateBucket([]byte(dbLogs)); err != bolt.ErrBucketExists {
+	if _, err := tx.CreateBucket([]byte(dbLogs)); err != bbolt.ErrBucketExists {
 		t.Fatalf("bad: %v", err)
 	}
-	if _, err := tx.CreateBucket([]byte(dbConf)); err != bolt.ErrBucketExists {
+	if _, err := tx.CreateBucket([]byte(dbConf)); err != bbolt.ErrBucketExists {
 		t.Fatalf("bad: %v", err)
 	}
 }
