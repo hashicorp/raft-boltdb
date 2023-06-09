@@ -1,14 +1,9 @@
-raft-boltdb
+raft-boltdb/v3
 ===========
 
-This repository provides the `raftboltdb` package. The package exports the
-`BoltStore` which is an implementation of both a `LogStore` and `StableStore`.
+This implementation uses the maintained version of BoltDB, [BBolt](https://github.com/etcd-io/bbolt). This is the primary version of `raft-boltdb` and should be used whenever possible. 
 
-It is meant to be used as a backend for the `raft` [package
-here](https://github.com/hashicorp/raft).
-
-This implementation uses [BoltDB](https://github.com/boltdb/bolt). BoltDB is
-a simple key/value store implemented in pure Go, and inspired by LMDB.
+There is no breaking API change with v2 of the library outside of removing the v1 to v2 migration code. V3 does change the module used for metrics from github.com/armon/go-metrics to github.com/hashicorp/go-metrics. You should ensure that this version of the library is only used with a version of Raft and your application that are using github.com/hashicorp/go-metrics. If not, then the metrics emission will not work properly.
 
 ## Metrics
 
