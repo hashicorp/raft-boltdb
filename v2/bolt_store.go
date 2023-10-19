@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	v1 "github.com/boltdb/bolt"
 	"github.com/hashicorp/raft"
 	"go.etcd.io/bbolt"
@@ -36,6 +36,8 @@ type BoltStore struct {
 
 	// The path to the Bolt database file
 	path string
+
+	msgpackUseNewTimeFormat bool
 }
 
 // Options contains all the configuration used to open the Bbolt
@@ -51,6 +53,12 @@ type Options struct {
 	// write to the log. This is unsafe, so it should be used
 	// with caution.
 	NoSync bool
+
+	// MsgpackUseNewTimeFormat is used to force the underlying msgpack codec to
+	// use the newer format of time.Time when encoding, used in versions <=0.5.5
+	// by default. Decoding is not affected, as all decoders know how to decode
+	// both formats.
+	MsgpackUseNewTimeFormat bool
 }
 
 // readOnly returns true if the contained bolt options say to open
@@ -76,8 +84,9 @@ func New(options Options) (*BoltStore, error) {
 
 	// Create the new store
 	store := &BoltStore{
-		conn: handle,
-		path: options.Path,
+		conn:                    handle,
+		path:                    options.Path,
+		msgpackUseNewTimeFormat: options.MsgpackUseNewTimeFormat,
 	}
 
 	// If the store was opened read-only, don't try and create buckets
@@ -188,7 +197,7 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 	batchSize := 0
 	for _, log := range logs {
 		key := uint64ToBytes(log.Index)
-		val, err := encodeMsgPack(log)
+		val, err := encodeMsgPack(log, b.msgpackUseNewTimeFormat)
 		if err != nil {
 			return err
 		}
