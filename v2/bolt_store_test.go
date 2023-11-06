@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp-forge/bbolt"
 	"github.com/hashicorp/raft"
 	v1 "github.com/hashicorp/raft-boltdb"
-	"go.etcd.io/bbolt"
 )
 
 func testBoltStore(t testing.TB) *BoltStore {

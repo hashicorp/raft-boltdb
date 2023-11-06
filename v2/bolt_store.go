@@ -8,8 +8,8 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	v1 "github.com/boltdb/bolt"
+	"github.com/hashicorp-forge/bbolt"
 	"github.com/hashicorp/raft"
-	"go.etcd.io/bbolt"
 )
 
 const (

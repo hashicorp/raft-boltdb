@@ -5,7 +5,7 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	"go.etcd.io/bbolt"
+	"github.com/hashicorp-forge/bbolt"
 )
 
 const (
