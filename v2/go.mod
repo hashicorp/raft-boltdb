@@ -6,7 +6,7 @@ require (
 	github.com/armon/go-metrics v0.4.1
 	github.com/boltdb/bolt v1.3.1
 	github.com/hashicorp/go-msgpack/v2 v2.1.1
-	github.com/hashicorp/raft v1.1.0
+	github.com/hashicorp/raft v1.6.0
 	github.com/hashicorp/raft-boltdb v0.0.0-20230125174641-2a8082862702
 	go.etcd.io/bbolt v1.3.5
 )
