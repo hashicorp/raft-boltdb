@@ -22,4 +22,3 @@ require (
 	golang.org/x/sys v0.13.0 // indirect
 )
 
-replace github.com/hashicorp/raft => /Users/swenson/projects/raft
