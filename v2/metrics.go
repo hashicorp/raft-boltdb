@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"go.etcd.io/bbolt"
 )
 

@@ -12,7 +12,7 @@ a simple key/value store implemented in pure Go, and inspired by LMDB.
 
 ## Metrics
 
-The raft-boldb library emits a number of metrics utilizing github.com/armon/go-metrics. Those metrics are detailed in the following table. One note is that the application which pulls in this library may add its own prefix to the metric names. For example within [Consul](https://github.com/hashicorp/consul), the metrics will be prefixed with `consul.`.
+The raft-boldb library emits a number of metrics utilizing either the github.com/armon/go-metrics or github.com/hashicorp/go-metrics libraries. Those metrics are detailed in the following table. One note is that the application which pulls in this library may add its own prefix to the metric names. For example within [Consul](https://github.com/hashicorp/consul), the metrics will be prefixed with `consul.`.
 
 | Metric                              | Unit         | Type    | Description           |
 | ----------------------------------- | ------------:| -------:|:--------------------- |
