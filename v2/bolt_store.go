@@ -177,7 +177,7 @@ func (b *BoltStore) LastIndex() (uint64, error) {
 }
 
 // GetLog is used to retrieve a log from Bbolt at a given index.
-func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
+func (b *BoltStore) GetLog(idx uint64, raftlog *raft.Log) error {
 	defer metrics.MeasureSince([]string{"raft", "boltdb", "getLog"}, time.Now())
 
 	tx, err := b.conn.Begin(false)
@@ -196,7 +196,7 @@ func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
 	if val == nil {
 		return raft.ErrLogNotFound
 	}
-	return decodeMsgPack(val, log)
+	return decodeMsgPack(val, raftlog)
 }
 
 // StoreLog is used to store a single raft log
