@@ -5,6 +5,7 @@ package raftboltdb
 
 import (
 	"errors"
+	"log"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -97,7 +98,11 @@ func (b *BoltStore) initialize() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			log.Printf("Rollback failed: %v", err)
+		}
+	}()
 
 	// Create all the buckets
 	if _, err := tx.CreateBucketIfNotExists(dbLogs); err != nil {
@@ -121,7 +126,11 @@ func (b *BoltStore) FirstIndex() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			log.Printf("Rollback failed: %v", err)
+		}
+	}()
 
 	curs := tx.Bucket(dbLogs).Cursor()
 	if first, _ := curs.First(); first == nil {
@@ -137,7 +146,11 @@ func (b *BoltStore) LastIndex() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			log.Printf("Rollback failed: %v", err)
+		}
+	}()
 
 	curs := tx.Bucket(dbLogs).Cursor()
 	if last, _ := curs.Last(); last == nil {
@@ -148,12 +161,16 @@ func (b *BoltStore) LastIndex() (uint64, error) {
 }
 
 // GetLog is used to retrieve a log from BoltDB at a given index.
-func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
+func (b *BoltStore) GetLog(idx uint64, raftlog *raft.Log) error {
 	tx, err := b.conn.Begin(false)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			log.Printf("Rollback failed: %v", err)
+		}
+	}()
 
 	bucket := tx.Bucket(dbLogs)
 	val := bucket.Get(uint64ToBytes(idx))
@@ -161,7 +178,7 @@ func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
 	if val == nil {
 		return raft.ErrLogNotFound
 	}
-	return decodeMsgPack(val, log)
+	return decodeMsgPack(val, raftlog)
 }
 
 // StoreLog is used to store a single raft log
@@ -176,7 +193,11 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			log.Printf("Rollback failed: %v", err)
+		}
+	}()
 
 	batchSize := 0
 	for _, log := range logs {
@@ -219,7 +240,11 @@ func (b *BoltStore) DeleteRange(min, max uint64) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			log.Printf("Rollback failed: %v", err)
+		}
+	}()
 
 	curs := tx.Bucket(dbLogs).Cursor()
 	for k, _ := curs.Seek(minKey); k != nil; k, _ = curs.Next() {
@@ -243,7 +268,11 @@ func (b *BoltStore) Set(k, v []byte) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			log.Printf("Rollback failed: %v", err)
+		}
+	}()
 
 	bucket := tx.Bucket(dbConf)
 	if err := bucket.Put(k, v); err != nil {
@@ -259,7 +288,11 @@ func (b *BoltStore) Get(k []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			log.Printf("Rollback failed: %v", err)
+		}
+	}()
 
 	bucket := tx.Bucket(dbConf)
 	val := bucket.Get(k)
