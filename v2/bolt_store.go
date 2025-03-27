@@ -111,7 +111,7 @@ func (b *BoltStore) initialize() error {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bbolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -143,7 +143,7 @@ func (b *BoltStore) FirstIndex() (uint64, error) {
 		return 0, err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bbolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -163,7 +163,7 @@ func (b *BoltStore) LastIndex() (uint64, error) {
 		return 0, err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bbolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -185,7 +185,7 @@ func (b *BoltStore) GetLog(idx uint64, raftlog *raft.Log) error {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bbolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -213,7 +213,7 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bbolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -260,7 +260,7 @@ func (b *BoltStore) DeleteRange(min, max uint64) error {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bbolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -288,7 +288,7 @@ func (b *BoltStore) Set(k, v []byte) error {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bbolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -308,7 +308,7 @@ func (b *BoltStore) Get(k []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bbolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -359,19 +359,19 @@ func MigrateToV2(source, destination string) (*BoltStore, error) {
 		return nil, fmt.Errorf("failed opening source database: %v", err)
 	}
 
-	//Start a connection to the source
+	// Start a connection to the source
 	srctx, err := srcDb.Begin(false)
 	if err != nil {
 		return nil, fmt.Errorf("failed connecting to source database: %v", err)
 	}
 	defer srctx.Rollback()
 
-	//Create the destination
+	// Create the destination
 	destDb, err := New(Options{Path: destination})
 	if err != nil {
 		return nil, fmt.Errorf("failed creating destination database: %v", err)
 	}
-	//Start a connection to the new
+	// Start a connection to the new
 	desttx, err := destDb.conn.Begin(true)
 	if err != nil {
 		destDb.Close()
@@ -381,7 +381,7 @@ func MigrateToV2(source, destination string) (*BoltStore, error) {
 
 	defer desttx.Rollback()
 
-	//Loop over both old buckets and set them in the new
+	// Loop over both old buckets and set them in the new
 	buckets := [][]byte{dbConf, dbLogs}
 	for _, b := range buckets {
 		srcB := srctx.Bucket(b)
@@ -396,7 +396,7 @@ func MigrateToV2(source, destination string) (*BoltStore, error) {
 		}
 	}
 
-	//If the commit fails, clean up
+	// If the commit fails, clean up
 	if err := desttx.Commit(); err != nil {
 		destDb.Close()
 		os.Remove(destination)
