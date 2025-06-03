@@ -99,7 +99,7 @@ func (b *BoltStore) initialize() error {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -127,7 +127,7 @@ func (b *BoltStore) FirstIndex() (uint64, error) {
 		return 0, err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -147,7 +147,7 @@ func (b *BoltStore) LastIndex() (uint64, error) {
 		return 0, err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -167,7 +167,7 @@ func (b *BoltStore) GetLog(idx uint64, raftlog *raft.Log) error {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -194,7 +194,7 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -241,7 +241,7 @@ func (b *BoltStore) DeleteRange(min, max uint64) error {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -269,7 +269,7 @@ func (b *BoltStore) Set(k, v []byte) error {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
@@ -289,7 +289,7 @@ func (b *BoltStore) Get(k []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, bolt.ErrTxClosed) {
 			log.Printf("Rollback failed: %v", err)
 		}
 	}()
