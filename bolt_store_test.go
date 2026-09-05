@@ -6,8 +6,10 @@ package raftboltdb
 import (
 	"bytes"
 	"io/ioutil"
+	"log"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -415,5 +417,35 @@ func TestBoltStore_SetUint64_GetUint64(t *testing.T) {
 	}
 	if val != v {
 		t.Fatalf("bad: %v", val)
+	}
+}
+
+func TestBoltStore_CommitDoesNotLogRollbackFailed(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+
+	store := testBoltStore(t)
+	defer store.Close()
+	defer os.Remove(store.path)
+
+	logs := []*raft.Log{
+		testRaftLog(1, "log1"),
+		testRaftLog(2, "log2"),
+		testRaftLog(3, "log3"),
+	}
+	if err := store.StoreLogs(logs); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if err := store.Set([]byte("k"), []byte("v")); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if err := store.DeleteRange(1, 2); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	got := buf.String()
+	if strings.Contains(got, "Rollback failed") {
+		t.Fatalf("successful commits should not log rollback failures; got:\n%s", got)
 	}
 }
