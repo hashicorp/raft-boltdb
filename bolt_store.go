@@ -5,7 +5,6 @@ package raftboltdb
 
 import (
 	"errors"
-	"log"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -98,11 +97,7 @@ func (b *BoltStore) initialize() error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			log.Printf("Rollback failed: %v", err)
-		}
-	}()
+	defer rollback(tx)
 
 	// Create all the buckets
 	if _, err := tx.CreateBucketIfNotExists(dbLogs); err != nil {
@@ -113,6 +108,12 @@ func (b *BoltStore) initialize() error {
 	}
 
 	return tx.Commit()
+}
+
+// rollback ignores Rollback errors. After a successful Commit the transaction
+// is already closed, so Rollback returns bolt.ErrTxClosed.
+func rollback(tx *bolt.Tx) {
+	_ = tx.Rollback()
 }
 
 // Close is used to gracefully close the DB connection.
@@ -126,11 +127,7 @@ func (b *BoltStore) FirstIndex() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			log.Printf("Rollback failed: %v", err)
-		}
-	}()
+	defer rollback(tx)
 
 	curs := tx.Bucket(dbLogs).Cursor()
 	if first, _ := curs.First(); first == nil {
@@ -146,11 +143,7 @@ func (b *BoltStore) LastIndex() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			log.Printf("Rollback failed: %v", err)
-		}
-	}()
+	defer rollback(tx)
 
 	curs := tx.Bucket(dbLogs).Cursor()
 	if last, _ := curs.Last(); last == nil {
@@ -166,11 +159,7 @@ func (b *BoltStore) GetLog(idx uint64, raftlog *raft.Log) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			log.Printf("Rollback failed: %v", err)
-		}
-	}()
+	defer rollback(tx)
 
 	bucket := tx.Bucket(dbLogs)
 	val := bucket.Get(uint64ToBytes(idx))
@@ -193,11 +182,7 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			log.Printf("Rollback failed: %v", err)
-		}
-	}()
+	defer rollback(tx)
 
 	batchSize := 0
 	for _, log := range logs {
@@ -240,11 +225,7 @@ func (b *BoltStore) DeleteRange(min, max uint64) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			log.Printf("Rollback failed: %v", err)
-		}
-	}()
+	defer rollback(tx)
 
 	curs := tx.Bucket(dbLogs).Cursor()
 	for k, _ := curs.Seek(minKey); k != nil; k, _ = curs.Next() {
@@ -268,11 +249,7 @@ func (b *BoltStore) Set(k, v []byte) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			log.Printf("Rollback failed: %v", err)
-		}
-	}()
+	defer rollback(tx)
 
 	bucket := tx.Bucket(dbConf)
 	if err := bucket.Put(k, v); err != nil {
@@ -288,11 +265,7 @@ func (b *BoltStore) Get(k []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			log.Printf("Rollback failed: %v", err)
-		}
-	}()
+	defer rollback(tx)
 
 	bucket := tx.Bucket(dbConf)
 	val := bucket.Get(k)
