@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2015, 2025
+// Copyright IBM Corp. 2015, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package raftboltdb
@@ -11,7 +11,7 @@ import (
 )
 
 // Decode reverses the encode operation on a byte slice input
-func decodeMsgPack(buf []byte, out interface{}) error {
+func decodeMsgPack(buf []byte, out any) error {
 	r := bytes.NewBuffer(buf)
 	hd := codec.MsgpackHandle{}
 	dec := codec.NewDecoder(r, &hd)
@@ -19,7 +19,7 @@ func decodeMsgPack(buf []byte, out interface{}) error {
 }
 
 // Encode writes an encoded object to a new bytes buffer
-func encodeMsgPack(in interface{}) (*bytes.Buffer, error) {
+func encodeMsgPack(in any) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	hd := codec.MsgpackHandle{}
 	enc := codec.NewEncoder(buf, &hd)

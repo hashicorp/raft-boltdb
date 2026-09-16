@@ -5,7 +5,6 @@ package raftboltdb
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -16,7 +15,7 @@ import (
 )
 
 func testBoltStore(t testing.TB) *BoltStore {
-	fh, err := ioutil.TempFile("", "bolt")
+	fh, err := os.CreateTemp("", "bolt")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -39,7 +38,7 @@ func testRaftLog(idx uint64, data string) *raft.Log {
 }
 
 func TestBoltStore_Implements(t *testing.T) {
-	var store interface{} = &BoltStore{}
+	var store any = &BoltStore{}
 	if _, ok := store.(raft.StableStore); !ok {
 		t.Fatalf("BoltStore does not implement raft.StableStore")
 	}
@@ -49,7 +48,7 @@ func TestBoltStore_Implements(t *testing.T) {
 }
 
 func TestBoltOptionsTimeout(t *testing.T) {
-	fh, err := ioutil.TempFile("", "bolt")
+	fh, err := os.CreateTemp("", "bolt")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -83,7 +82,7 @@ func TestBoltOptionsTimeout(t *testing.T) {
 }
 
 func TestBoltOptionsReadOnly(t *testing.T) {
-	fh, err := ioutil.TempFile("", "bolt")
+	fh, err := os.CreateTemp("", "bolt")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -132,7 +131,7 @@ func TestBoltOptionsReadOnly(t *testing.T) {
 }
 
 func TestNewBoltStore(t *testing.T) {
-	fh, err := ioutil.TempFile("", "bolt")
+	fh, err := os.CreateTemp("", "bolt")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
