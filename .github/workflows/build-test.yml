@@ -14,10 +14,10 @@ jobs:
             - name: Setup Go
               uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a
               with:
-                go-version: '1.20'
+                go-version: '1.26'
             - name: Run golangci-lint
-              uses: golangci/golangci-lint-action@08e2f20817b15149a52b5b3ebe7de50aff2ba8c5
-            - name: Run test and generate coverage report 
+              uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+            - name: Run test and generate coverage report
               run: go test -v ./... -coverprofile=coverage.out
             - name: Upload coverage report
               uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808

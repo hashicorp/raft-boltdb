@@ -1,7 +1,24 @@
-# Copyright IBM Corp. 2015, 2025
+# Copyright IBM Corp. 2013, 2026
 # SPDX-License-Identifier: MPL-2.0
 
+version: "2"
+
+run:
+  timeout: 10m
+  concurrency: 4
+
 linters:
+  default: none
   enable:
-    - errcheck
-output_format: colored-line-number
+    #- errcheck
+    - govet
+    - ineffassign
+    - modernize
+    - staticcheck
+    - unparam
+    - unused
+
+formatters:
+  settings:
+    gofmt:
+      simplify: true
